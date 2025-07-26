@@ -4,8 +4,16 @@ import json
 import signal
 import sys
 import uuid
+import logging
 from datetime import datetime
 from screenshot_workflow import ScreenshotWorkflow
+
+logging.basicConfig(
+    level=logging.WARNING,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 class ScreenshotClient:
     def __init__(self, server_host='localhost', server_port=8765):
@@ -23,27 +31,34 @@ class ScreenshotClient:
         
         while self.is_running:
             try:
+                logger.info(f"Connecting to server: {uri}")
                 self.websocket = await websockets.connect(uri)
+                logger.info(f"Successfully connected to server")
                 await self.handle_connection()
             except websockets.exceptions.ConnectionClosed:
-                pass
+                logger.warning("Connection to server closed")
             except Exception as e:
-                pass
+                logger.error(f"Connection error: {e}")
             
             if self.is_running:
+                logger.info(f"Reconnecting in {self.reconnect_delay} seconds...")
                 await asyncio.sleep(self.reconnect_delay)
                 self.reconnect_delay = min(self.reconnect_delay * 2, self.max_reconnect_delay)
     
     async def handle_connection(self):
         self.reconnect_delay = 5
+        logger.info("Connection established, waiting for server messages...")
         
         async for message in self.websocket:
             try:
                 data = json.loads(message)
+                logger.debug(f"Received message from server: {data.get('type', 'unknown')}")
                 await self.handle_server_message(data)
             except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON received: {message[:100]}...")
                 continue
             except Exception as e:
+                logger.error(f"Error handling message: {e}")
                 break
     
     async def handle_server_message(self, data):
@@ -51,17 +66,29 @@ class ScreenshotClient:
         
         if message_type == 'connection_established':
             interval = data.get('interval', 15)
+            logger.info(f"Connection established with server. Screenshot interval: {interval} seconds")
         
         elif message_type == 'execute_screenshot':
             command_id = data.get('command_id', 'unknown')
+            logger.info(f"Executing screenshot command: {command_id}")
             await self.execute_screenshot_command(command_id)
         
         elif message_type == 'heartbeat_ack':
-            pass
+            logger.debug("Heartbeat acknowledged by server")
+        
+        else:
+            logger.warning(f"Unknown message type received: {message_type}")
     
     async def execute_screenshot_command(self, command_id):
         try:
+            logger.info(f"Starting screenshot workflow for command: {command_id}")
             result = self.workflow.execute_screenshot_workflow()
+            
+            timing = result.get('timing')
+            if timing:
+                logger.info(f"Screenshot completed. Timing detected: {timing}")
+            else:
+                logger.warning("Screenshot completed but no timing detected")
             
             response = {
                 'type': 'screenshot_completed',
@@ -81,8 +108,10 @@ class ScreenshotClient:
             
             if self.websocket:
                 await self.websocket.send(json.dumps(response))
+                logger.info(f"Sent completion response to server for command: {command_id}")
         
         except Exception as e:
+            logger.error(f"Error executing screenshot: {e}")
             error_response = {
                 'type': 'screenshot_error',
                 'client_id': self.client_id,
@@ -93,6 +122,7 @@ class ScreenshotClient:
             
             if self.websocket:
                 await self.websocket.send(json.dumps(error_response))
+                logger.info(f"Sent error response to server for command: {command_id}")
     
     async def send_heartbeat(self):
         while self.is_running and self.websocket:
@@ -103,12 +133,16 @@ class ScreenshotClient:
                     'timestamp': datetime.now().isoformat()
                 }
                 await self.websocket.send(json.dumps(heartbeat))
+                logger.debug("Sent heartbeat to server")
                 await asyncio.sleep(30)
-            except:
+            except Exception as e:
+                logger.warning(f"Heartbeat failed: {e}")
                 break
     
     async def start(self):
         self.is_running = True
+        logger.info(f"Starting screenshot client (ID: {self.client_id})")
+        logger.info(f"Connecting to server: {self.server_host}:{self.server_port}")
         
         heartbeat_task = asyncio.create_task(self.send_heartbeat())
         connection_task = asyncio.create_task(self.connect_to_server())
@@ -116,13 +150,15 @@ class ScreenshotClient:
         try:
             await asyncio.gather(heartbeat_task, connection_task)
         except asyncio.CancelledError:
-            pass
+            logger.info("Client tasks cancelled")
     
     async def stop(self):
         self.is_running = False
+        logger.info("Stopping screenshot client...")
         
         if self.websocket:
             await self.websocket.close()
+            logger.info("WebSocket connection closed")
 
 async def main():
     import argparse
@@ -130,12 +166,18 @@ async def main():
     parser = argparse.ArgumentParser(description='Screenshot Client')
     parser.add_argument('--host', default='localhost', help='Server host')
     parser.add_argument('--port', type=int, default=8765, help='Server port')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     
     args = parser.parse_args()
+    
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.info("Debug logging enabled")
     
     client = ScreenshotClient(args.host, args.port)
     
     def signal_handler(sig, frame):
+        logger.info(f"Received signal {sig}, shutting down...")
         asyncio.create_task(client.stop())
     
     signal.signal(signal.SIGINT, signal_handler)
@@ -144,6 +186,7 @@ async def main():
     try:
         await client.start()
     except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received")
         await client.stop()
 
 if __name__ == "__main__":
