@@ -6,19 +6,29 @@ import sys
 from datetime import datetime
 from typing import Set, Dict, Any
 import logging
+import time
 
 class ScreenshotServer:
-    def __init__(self, host='0.0.0.0', port=8765, interval_seconds=15):
+    def __init__(self, host='0.0.0.0', port=8765, enable_telegram=True):
         self.host = host
         self.port = port
-        self.interval_seconds = interval_seconds
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
         self.server = None
-        self.scheduler_task = None
+        self.telegram_bot = None
         self.is_running = False
+        self.start_time = time.time()
         
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
+        
+        if enable_telegram:
+            try:
+                from telegram_bot import ScreenshotTelegramBot
+                self.telegram_bot = ScreenshotTelegramBot(self)
+                self.logger.info("Telegram bot integration enabled")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize Telegram bot: {e}")
+                self.telegram_bot = None
     
     async def register_client(self, websocket: websockets.WebSocketServerProtocol):
         self.clients.add(websocket)
@@ -27,7 +37,6 @@ class ScreenshotServer:
         try:
             await websocket.send(json.dumps({
                 'type': 'connection_established',
-                'interval': self.interval_seconds,
                 'timestamp': datetime.now().isoformat()
             }))
             
@@ -59,6 +68,7 @@ class ScreenshotServer:
     
     async def broadcast_screenshot_command(self):
         if not self.clients:
+            self.logger.warning("No connected clients to send screenshot command to")
             return
         
         message = {
@@ -69,10 +79,12 @@ class ScreenshotServer:
         
         message_json = json.dumps(message)
         disconnected_clients = set()
+        sent_count = 0
         
         for client in self.clients:
             try:
                 await client.send(message_json)
+                sent_count += 1
             except websockets.exceptions.ConnectionClosed:
                 disconnected_clients.add(client)
             except Exception as e:
@@ -84,12 +96,22 @@ class ScreenshotServer:
         
         if disconnected_clients:
             self.logger.info(f"Removed {len(disconnected_clients)} disconnected clients")
+        
+        self.logger.info(f"Screenshot command sent to {sent_count} clients")
+        return sent_count
     
-    async def scheduler_loop(self):
-        while self.is_running:
-            await asyncio.sleep(self.interval_seconds)
-            if self.is_running:
-                await self.broadcast_screenshot_command()
+    def get_uptime(self):
+        uptime_seconds = int(time.time() - self.start_time)
+        hours = uptime_seconds // 3600
+        minutes = (uptime_seconds % 3600) // 60
+        seconds = uptime_seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    
+    async def restart(self):
+        self.logger.info("Server restart requested")
+        await self.stop()
+        await asyncio.sleep(2)
+        await self.start()
     
     async def start(self):
         self.is_running = True
@@ -99,22 +121,19 @@ class ScreenshotServer:
             self.port
         )
         
-        self.scheduler_task = asyncio.create_task(self.scheduler_loop())
-        
         self.logger.info(f"Screenshot server started on {self.host}:{self.port}")
-        self.logger.info(f"Broadcasting screenshot commands every {self.interval_seconds} seconds")
+        
+        if self.telegram_bot:
+            await self.telegram_bot.start()
+            self.logger.info("Telegram bot started")
         
         await self.server.wait_closed()
     
     async def stop(self):
         self.is_running = False
         
-        if self.scheduler_task:
-            self.scheduler_task.cancel()
-            try:
-                await self.scheduler_task
-            except asyncio.CancelledError:
-                pass
+        if self.telegram_bot:
+            await self.telegram_bot.stop()
         
         if self.server:
             self.server.close()
