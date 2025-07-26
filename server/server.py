@@ -15,6 +15,7 @@ class ScreenshotServer:
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
         self.server = None
         self.telegram_bot = None
+        self.telegram_task = None
         self.is_running = False
         self.start_time = time.time()
         
@@ -115,6 +116,7 @@ class ScreenshotServer:
     
     async def start(self):
         self.is_running = True
+        
         self.server = await websockets.serve(
             self.register_client,
             self.host,
@@ -124,13 +126,23 @@ class ScreenshotServer:
         self.logger.info(f"Screenshot server started on {self.host}:{self.port}")
         
         if self.telegram_bot:
-            await self.telegram_bot.start()
+            self.telegram_task = asyncio.create_task(self.telegram_bot.start())
             self.logger.info("Telegram bot started")
         
-        await self.server.wait_closed()
+        try:
+            await self.server.wait_closed()
+        except asyncio.CancelledError:
+            pass
     
     async def stop(self):
         self.is_running = False
+        
+        if self.telegram_task:
+            self.telegram_task.cancel()
+            try:
+                await self.telegram_task
+            except asyncio.CancelledError:
+                pass
         
         if self.telegram_bot:
             await self.telegram_bot.stop()
@@ -149,7 +161,14 @@ class ScreenshotServer:
         self.logger.info("Server stopped")
 
 async def main():
-    server = ScreenshotServer()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Screenshot Server')
+    parser.add_argument('--no-telegram', action='store_true', help='Disable Telegram bot')
+    
+    args = parser.parse_args()
+    
+    server = ScreenshotServer(enable_telegram=not args.no_telegram)
     
     def signal_handler(sig, frame):
         asyncio.create_task(server.stop())

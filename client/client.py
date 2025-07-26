@@ -65,8 +65,7 @@ class ScreenshotClient:
         message_type = data.get('type')
         
         if message_type == 'connection_established':
-            interval = data.get('interval', 15)
-            logger.info(f"Connection established with server. Screenshot interval: {interval} seconds")
+            logger.info(f"Connection established with server. Ready for manual screenshot commands.")
         
         elif message_type == 'execute_screenshot':
             command_id = data.get('command_id', 'unknown')
