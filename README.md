@@ -19,24 +19,25 @@
 
 ## Быстрый старт
 
-### 1. Развертывание сервера на Ubuntu
+### 1. Развертывание сервера
 
 ```bash
-# Скопируйте deploy.sh на сервер и выполните:
-sudo ./deploy.sh
+# Скопируйте файлы сервера в нужную директорию и выполните:
+./install.sh
 ```
 
 ### 2. Настройка Telegram Bot
 
 ```bash
-# На сервере отредактируйте .env файл
-nano /opt/screenshot-server/.env
+# Отредактируйте .env файл
+nano .env
 
 # Добавьте ваш токен
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 
-# Перезапустите сервер
-sudo systemctl restart screenshot-server
+# Запустите сервер
+source venv/bin/activate
+python main.py
 ```
 
 ### 3. Запуск клиента
@@ -71,17 +72,15 @@ pip install -r requirements.txt
 ## Управление сервером
 
 ```bash
-# Статус
-sudo systemctl status screenshot-server
+# Запуск
+source venv/bin/activate
+python main.py
 
 # Логи
-sudo journalctl -u screenshot-server -f
-
-# Перезапуск
-sudo systemctl restart screenshot-server
+tail -f screenshot_server.log
 
 # Остановка
-sudo systemctl stop screenshot-server
+Ctrl+C
 ```
 
 ## Функциональность
@@ -122,9 +121,10 @@ WebSocket JSON сообщения:
 ```
 Audio_Prompter/
 ├── server/                 # Серверная часть
+│   ├── main.py            # Точка входа сервера
 │   ├── server.py          # Основной сервер
-│   ├── deploy.sh          # Скрипт развертывания
-│   ├── systemd_service.py # Создание systemd сервиса
+│   ├── telegram_bot.py    # Telegram бот
+│   ├── install.sh         # Скрипт установки
 │   └── requirements.txt   # Зависимости сервера
 ├── client/                # Клиентская часть
 │   ├── main.py           # Автономный режим

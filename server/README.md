@@ -4,23 +4,26 @@
 
 ## Установка
 
+### Автоматическая установка
+
+```bash
+./install.sh
+```
+
+### Ручная установка
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Запуск
 
-### Ручной запуск
-
 ```bash
-python server.py
-```
+# Активируйте виртуальное окружение
+source venv/bin/activate
 
-### Автоматический запуск через systemd (Ubuntu)
-
-```bash
-sudo python systemd_service.py
-sudo systemctl start screenshot-server
+# Запустите сервер
+python main.py
 ```
 
 ## Конфигурация
@@ -51,28 +54,30 @@ SERVER_PORT=8765
 
 ## Архитектура
 
+- `main.py` - точка входа для запуска сервера
 - `server.py` - основной сервер с WebSocket поддержкой
 - `telegram_bot.py` - Telegram бот для управления
-- `systemd_service.py` - создание systemd сервиса
 - `requirements.txt` - зависимости
 - `.env` - конфигурация бота
+- `install.sh` - скрипт установки
 
 ## Управление
 
-### Systemd команды
+### Запуск/остановка
 
 ```bash
-sudo systemctl start screenshot-server
-sudo systemctl stop screenshot-server
-sudo systemctl status screenshot-server
-sudo systemctl enable screenshot-server
-sudo systemctl disable screenshot-server
+# Запуск
+python main.py
+
+# Остановка
+Ctrl+C
 ```
 
 ### Логи
 
 ```bash
-journalctl -u screenshot-server -f
+# Логи в консоли и файле
+tail -f screenshot_server.log
 ```
 
 ## Telegram Bot Команды

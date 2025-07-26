@@ -160,26 +160,4 @@ class ScreenshotServer:
         self.clients.clear()
         self.logger.info("Server stopped")
 
-async def main():
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Screenshot Server')
-    parser.add_argument('--no-telegram', action='store_true', help='Disable Telegram bot')
-    
-    args = parser.parse_args()
-    
-    server = ScreenshotServer(enable_telegram=not args.no_telegram)
-    
-    def signal_handler(sig, frame):
-        asyncio.create_task(server.stop())
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    try:
-        await server.start()
-    except KeyboardInterrupt:
-        await server.stop()
-
-if __name__ == "__main__":
-    asyncio.run(main()) 
+ 
