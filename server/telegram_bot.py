@@ -22,13 +22,13 @@ class ScreenshotTelegramBot:
         logger.info(f"Start command received from user {update.effective_user.id}")
         
         keyboard = [
-            [InlineKeyboardButton("📸 Take Screenshot", callback_data='take_screenshot')]
+            [InlineKeyboardButton("📸 Сделать скриншот", callback_data='take_screenshot')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            "🎬 Screenshot Control Bot\n\n"
-            "Press the button below to take a screenshot:",
+            "🎬 Бот управления скриншотами\n\n"
+            "Нажмите кнопку ниже, чтобы сделать скриншот:",
             reply_markup=reply_markup
         )
         logger.info("Start command response sent")
@@ -49,20 +49,43 @@ class ScreenshotTelegramBot:
         try:
             await self.screenshot_server.broadcast_screenshot_command()
             
-            message = "📸 Screenshot command sent to all connected clients!"
+            keyboard = [
+                [InlineKeyboardButton("📸 Сделать скриншот", callback_data='take_screenshot')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            message = "📸 Команда скриншота отправлена всем подключенным клиентам!"
+            
             if hasattr(update, 'callback_query'):
-                await update.callback_query.edit_message_text(message)
+                await update.callback_query.edit_message_text(
+                    message,
+                    reply_markup=reply_markup
+                )
             else:
-                await update.message.reply_text(message)
+                await update.message.reply_text(
+                    message,
+                    reply_markup=reply_markup
+                )
             
             logger.info(f"Screenshot command sent via Telegram by user {update.effective_user.id}")
         
         except Exception as e:
-            error_msg = f"❌ Error sending screenshot command: {str(e)}"
+            error_msg = f"❌ Ошибка отправки команды скриншота: {str(e)}"
+            keyboard = [
+                [InlineKeyboardButton("📸 Сделать скриншот", callback_data='take_screenshot')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             if hasattr(update, 'callback_query'):
-                await update.callback_query.edit_message_text(error_msg)
+                await update.callback_query.edit_message_text(
+                    error_msg,
+                    reply_markup=reply_markup
+                )
             else:
-                await update.message.reply_text(error_msg)
+                await update.message.reply_text(
+                    error_msg,
+                    reply_markup=reply_markup
+                )
             logger.error(f"Telegram bot error: {e}")
     
 
