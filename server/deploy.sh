@@ -46,6 +46,8 @@ class ScreenshotTelegramBot:
             raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        logger.info(f"Start command received from user {update.effective_user.id}")
+        
         keyboard = [
             [InlineKeyboardButton("📸 Take Screenshot", callback_data='take_screenshot')]
         ]
@@ -56,12 +58,15 @@ class ScreenshotTelegramBot:
             "Press the button below to take a screenshot:",
             reply_markup=reply_markup
         )
+        logger.info("Start command response sent")
     
     async def pause_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        logger.info(f"Pause command received from user {update.effective_user.id}")
         await self.take_screenshot(update, context)
     
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
+        logger.info(f"Button callback received: {query.data} from user {update.effective_user.id}")
         await query.answer()
         
         if query.data == 'take_screenshot':
@@ -92,6 +97,7 @@ class ScreenshotTelegramBot:
             logger.error("Telegram bot token not configured")
             return
         
+        logger.info(f"Initializing Telegram bot with token: {self.bot_token[:10]}...")
         self.application = Application.builder().token(self.bot_token).build()
         
         self.application.add_handler(CommandHandler("start", self.start_command))
@@ -103,6 +109,12 @@ class ScreenshotTelegramBot:
         await self.application.start()
         await self.application.updater.start_polling()
         logger.info("Telegram bot started successfully")
+        
+        # Keep the bot running
+        try:
+            await self.application.updater.idle()
+        except asyncio.CancelledError:
+            pass
     
     async def stop(self):
         if self.application:
