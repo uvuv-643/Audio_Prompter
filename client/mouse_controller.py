@@ -12,4 +12,8 @@ class MouseController:
         return current_pos
     
     def get_current_position(self):
-        return pyautogui.position() 
+        return pyautogui.position()
+    
+    def click_at_position(self, x, y):
+        pyautogui.click(x, y)
+        return pyautogui.Point(x, y) 

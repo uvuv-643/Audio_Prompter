@@ -56,7 +56,7 @@ class ScreenshotTelegramBot:
             
             from datetime import datetime
             current_time = datetime.now().strftime("%H:%M:%S")
-            message = f"⏸️ Команда перевода отправлена всем подключенным клиентам!\n⏰ {current_time}"
+            message = f"⏸️ Команда перевода отправлена на сервер трансляции!"
             
             if hasattr(update, 'callback_query'):
                 try:

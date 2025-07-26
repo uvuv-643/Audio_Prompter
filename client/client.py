@@ -16,12 +16,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class ScreenshotClient:
-    def __init__(self, server_host='localhost', server_port=8765):
+    def __init__(self, server_host='localhost', server_port=8765, vtt_url=None, enable_tts=True):
         self.server_host = server_host
         self.server_port = server_port
         self.websocket = None
         self.client_id = str(uuid.uuid4())[:8]
-        self.workflow = ScreenshotWorkflow()
+        self.workflow = ScreenshotWorkflow(vtt_url=vtt_url, enable_tts=enable_tts)
         self.is_running = False
         self.reconnect_delay = 5
         self.max_reconnect_delay = 60
@@ -162,9 +162,11 @@ class ScreenshotClient:
 async def main():
     import argparse
     
-    parser = argparse.ArgumentParser(description='Screenshot Client')
+    parser = argparse.ArgumentParser(description='Screenshot Client with TTS')
     parser.add_argument('--host', default='localhost', help='Server host')
     parser.add_argument('--port', type=int, default=8765, help='Server port')
+    parser.add_argument('--vtt-url', help='URL to VTT subtitles file')
+    parser.add_argument('--no-tts', action='store_true', help='Disable TTS functionality')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     
     args = parser.parse_args()
@@ -173,7 +175,7 @@ async def main():
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info("Debug logging enabled")
     
-    client = ScreenshotClient(args.host, args.port)
+    client = ScreenshotClient(args.host, args.port, args.vtt_url, enable_tts=not args.no_tts)
     
     def signal_handler(sig, frame):
         logger.info(f"Received signal {sig}, shutting down...")

@@ -2,6 +2,7 @@
 
 import signal
 import sys
+import argparse
 from screenshot_workflow import ScreenshotWorkflow
 from scheduler import TaskScheduler
 
@@ -13,11 +14,17 @@ def signal_handler(sig, frame):
 def main():
     global scheduler
     
+    parser = argparse.ArgumentParser(description='Screenshot Workflow with VTT Subtitles and TTS')
+    parser.add_argument('--vtt-url', help='URL to VTT subtitles file')
+    parser.add_argument('--interval', type=int, default=15, help='Screenshot interval in seconds')
+    parser.add_argument('--no-tts', action='store_true', help='Disable TTS functionality')
+    args = parser.parse_args()
+    
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    workflow = ScreenshotWorkflow()
-    scheduler = TaskScheduler(interval_seconds=15)
+    workflow = ScreenshotWorkflow(vtt_url=args.vtt_url, enable_tts=not args.no_tts)
+    scheduler = TaskScheduler(interval_seconds=args.interval)
     
     scheduler.start_scheduled_task(workflow.execute_screenshot_workflow)
     
