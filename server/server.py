@@ -61,6 +61,16 @@ class ScreenshotServer:
             result = data.get('result', {})
             self.logger.info(f"Screenshot completed by client {client_id}: {result.get('timing', 'N/A')}")
         
+        elif message_type == 'left_key_completed':
+            client_id = data.get('client_id', 'unknown')
+            result = data.get('result', {})
+            self.logger.info(f"Left key completed by client {client_id}")
+        
+        elif message_type == 'space_key_completed':
+            client_id = data.get('client_id', 'unknown')
+            result = data.get('result', {})
+            self.logger.info(f"Space key completed by client {client_id}")
+        
         elif message_type == 'heartbeat':
             await websocket.send(json.dumps({
                 'type': 'heartbeat_ack',
@@ -99,6 +109,74 @@ class ScreenshotServer:
             self.logger.info(f"Removed {len(disconnected_clients)} disconnected clients")
         
         self.logger.info(f"Screenshot command sent to {sent_count} clients")
+        return sent_count
+    
+    async def broadcast_left_key_command(self):
+        if not self.clients:
+            self.logger.warning("No connected clients to send left key command to")
+            return
+        
+        message = {
+            'type': 'execute_left_key',
+            'timestamp': datetime.now().isoformat(),
+            'command_id': f"left_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        }
+        
+        message_json = json.dumps(message)
+        disconnected_clients = set()
+        sent_count = 0
+        
+        for client in self.clients:
+            try:
+                await client.send(message_json)
+                sent_count += 1
+            except websockets.exceptions.ConnectionClosed:
+                disconnected_clients.add(client)
+            except Exception as e:
+                self.logger.error(f"Error sending to client: {e}")
+                disconnected_clients.add(client)
+        
+        for client in disconnected_clients:
+            self.clients.discard(client)
+        
+        if disconnected_clients:
+            self.logger.info(f"Removed {len(disconnected_clients)} disconnected clients")
+        
+        self.logger.info(f"Left key command sent to {sent_count} clients")
+        return sent_count
+    
+    async def broadcast_space_key_command(self):
+        if not self.clients:
+            self.logger.warning("No connected clients to send space key command to")
+            return
+        
+        message = {
+            'type': 'execute_space_key',
+            'timestamp': datetime.now().isoformat(),
+            'command_id': f"space_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        }
+        
+        message_json = json.dumps(message)
+        disconnected_clients = set()
+        sent_count = 0
+        
+        for client in self.clients:
+            try:
+                await client.send(message_json)
+                sent_count += 1
+            except websockets.exceptions.ConnectionClosed:
+                disconnected_clients.add(client)
+            except Exception as e:
+                self.logger.error(f"Error sending to client: {e}")
+                disconnected_clients.add(client)
+        
+        for client in disconnected_clients:
+            self.clients.discard(client)
+        
+        if disconnected_clients:
+            self.logger.info(f"Removed {len(disconnected_clients)} disconnected clients")
+        
+        self.logger.info(f"Space key command sent to {sent_count} clients")
         return sent_count
     
     def get_uptime(self):

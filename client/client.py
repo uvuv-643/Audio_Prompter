@@ -72,6 +72,16 @@ class ScreenshotClient:
             logger.info(f"Executing screenshot command: {command_id}")
             await self.execute_screenshot_command(command_id)
         
+        elif message_type == 'execute_left_key':
+            command_id = data.get('command_id', 'unknown')
+            logger.info(f"Executing left key command: {command_id}")
+            await self.execute_left_key_command(command_id)
+        
+        elif message_type == 'execute_space_key':
+            command_id = data.get('command_id', 'unknown')
+            logger.info(f"Executing space key command: {command_id}")
+            await self.execute_space_key_command(command_id)
+        
         elif message_type == 'heartbeat_ack':
             logger.debug("Heartbeat acknowledged by server")
         
@@ -122,6 +132,80 @@ class ScreenshotClient:
             if self.websocket:
                 await self.websocket.send(json.dumps(error_response))
                 logger.info(f"Sent error response to server for command: {command_id}")
+    
+    async def execute_left_key_command(self, command_id):
+        try:
+            from mouse_controller import MouseController
+            controller = MouseController()
+            mouse_position = controller.press_left_key()
+            
+            response = {
+                'type': 'left_key_completed',
+                'client_id': self.client_id,
+                'command_id': command_id,
+                'timestamp': datetime.now().isoformat(),
+                'result': {
+                    'mouse_position': {
+                        'x': mouse_position.x,
+                        'y': mouse_position.y
+                    }
+                }
+            }
+            
+            if self.websocket:
+                await self.websocket.send(json.dumps(response))
+                logger.info(f"Sent left key completion response to server for command: {command_id}")
+        
+        except Exception as e:
+            logger.error(f"Error executing left key: {e}")
+            error_response = {
+                'type': 'left_key_error',
+                'client_id': self.client_id,
+                'command_id': command_id,
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e)
+            }
+            
+            if self.websocket:
+                await self.websocket.send(json.dumps(error_response))
+                logger.info(f"Sent left key error response to server for command: {command_id}")
+    
+    async def execute_space_key_command(self, command_id):
+        try:
+            from mouse_controller import MouseController
+            controller = MouseController()
+            mouse_position = controller.press_space_key()
+            
+            response = {
+                'type': 'space_key_completed',
+                'client_id': self.client_id,
+                'command_id': command_id,
+                'timestamp': datetime.now().isoformat(),
+                'result': {
+                    'mouse_position': {
+                        'x': mouse_position.x,
+                        'y': mouse_position.y
+                    }
+                }
+            }
+            
+            if self.websocket:
+                await self.websocket.send(json.dumps(response))
+                logger.info(f"Sent space key completion response to server for command: {command_id}")
+        
+        except Exception as e:
+            logger.error(f"Error executing space key: {e}")
+            error_response = {
+                'type': 'space_key_error',
+                'client_id': self.client_id,
+                'command_id': command_id,
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e)
+            }
+            
+            if self.websocket:
+                await self.websocket.send(json.dumps(error_response))
+                logger.info(f"Sent space key error response to server for command: {command_id}")
     
     async def send_heartbeat(self):
         while self.is_running and self.websocket:

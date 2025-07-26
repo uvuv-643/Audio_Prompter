@@ -22,13 +22,16 @@ class ScreenshotTelegramBot:
         logger.info(f"Start command received from user {update.effective_user.id}")
         
         keyboard = [
-            [InlineKeyboardButton("⏸️ Поставить на паузу", callback_data='take_screenshot')]
+            [
+                InlineKeyboardButton("⏪", callback_data='press_left'),
+                InlineKeyboardButton("⏯️", callback_data='press_space'),
+                InlineKeyboardButton("📸", callback_data='take_screenshot')
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            "🎬 Бот управления переводом\n\n"
-            "Нажмите кнопку ниже, чтобы поставить на паузу:",
+            "🎬 Управление переводом",
             reply_markup=reply_markup
         )
         logger.info("Start command response sent")
@@ -44,19 +47,25 @@ class ScreenshotTelegramBot:
         
         if query.data == 'take_screenshot':
             await self.take_screenshot(update, context)
+        elif query.data == 'press_space':
+            await self.press_space(update, context)
+        elif query.data == 'press_left':
+            await self.press_left(update, context)
     
     async def take_screenshot(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await self.screenshot_server.broadcast_screenshot_command()
             
             keyboard = [
-                [InlineKeyboardButton("📸 Сделать скриншот", callback_data='take_screenshot')]
+                [
+                    InlineKeyboardButton("⏪", callback_data='press_left'),
+                    InlineKeyboardButton("⏯️", callback_data='press_space'),
+                    InlineKeyboardButton("📸", callback_data='take_screenshot')
+                ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            from datetime import datetime
-            current_time = datetime.now().strftime("%H:%M:%S")
-            message = f"⏸️ Команда перевода отправлена на сервер трансляции!"
+            message = f"📸 Перевод выполнен!"
             
             if hasattr(update, 'callback_query'):
                 try:
@@ -66,7 +75,6 @@ class ScreenshotTelegramBot:
                     )
                 except Exception as edit_error:
                     if "Message is not modified" in str(edit_error):
-                        # Message is the same, just answer the callback query
                         await update.callback_query.answer("✅ Перевод выполнен!")
                     else:
                         raise edit_error
@@ -79,9 +87,13 @@ class ScreenshotTelegramBot:
             logger.info(f"Screenshot command sent via Telegram by user {update.effective_user.id}")
         
         except Exception as e:
-            error_msg = f"❌ Ошибка отправки команды перевода: {str(e)}"
+            error_msg = f"❌ Ошибка: {str(e)}"
             keyboard = [
-                [InlineKeyboardButton("⏸️ Поставить на паузу", callback_data='take_screenshot')]
+                [
+                    InlineKeyboardButton("⏪", callback_data='press_left'),
+                    InlineKeyboardButton("⏯️", callback_data='press_space'),
+                    InlineKeyboardButton("📸", callback_data='take_screenshot')
+                ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -93,7 +105,132 @@ class ScreenshotTelegramBot:
                     )
                 except Exception as edit_error:
                     if "Message is not modified" in str(edit_error):
-                        # Message is the same, just answer the callback query
+                        await update.callback_query.answer("❌ Ошибка!")
+                    else:
+                        raise edit_error
+            else:
+                await update.message.reply_text(
+                    error_msg,
+                    reply_markup=reply_markup
+                )
+            logger.error(f"Telegram bot error: {e}")
+    
+    async def press_space(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            await self.screenshot_server.broadcast_space_key_command()
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("⏪", callback_data='press_left'),
+                    InlineKeyboardButton("⏯️", callback_data='press_space'),
+                    InlineKeyboardButton("📸", callback_data='take_screenshot')
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            message = f"⏯️ Пауза выполнена!"
+            
+            if hasattr(update, 'callback_query'):
+                try:
+                    await update.callback_query.edit_message_text(
+                        message,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        await update.callback_query.answer("✅ Пауза выполнена!")
+                    else:
+                        raise edit_error
+            else:
+                await update.message.reply_text(
+                    message,
+                    reply_markup=reply_markup
+                )
+            
+            logger.info(f"Space key command sent via Telegram by user {update.effective_user.id}")
+        
+        except Exception as e:
+            error_msg = f"❌ Ошибка: {str(e)}"
+            keyboard = [
+                [
+                    InlineKeyboardButton("⏪", callback_data='press_left'),
+                    InlineKeyboardButton("⏯️", callback_data='press_space'),
+                    InlineKeyboardButton("📸", callback_data='take_screenshot')
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if hasattr(update, 'callback_query'):
+                try:
+                    await update.callback_query.edit_message_text(
+                        error_msg,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        await update.callback_query.answer("❌ Ошибка!")
+                    else:
+                        raise edit_error
+            else:
+                await update.message.reply_text(
+                    error_msg,
+                    reply_markup=reply_markup
+                )
+            logger.error(f"Telegram bot error: {e}")
+    
+    async def press_left(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            await self.screenshot_server.broadcast_left_key_command()
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("⏪", callback_data='press_left'),
+                    InlineKeyboardButton("⏯️", callback_data='press_space'),
+                    InlineKeyboardButton("📸", callback_data='take_screenshot')
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            message = f"⏪ Перемотка назад выполнена!"
+            
+            if hasattr(update, 'callback_query'):
+                try:
+                    await update.callback_query.edit_message_text(
+                        message,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        await update.callback_query.answer("✅ Перемотка выполнена!")
+                    else:
+                        raise edit_error
+            else:
+                await update.message.reply_text(
+                    message,
+                    reply_markup=reply_markup
+                )
+            
+            logger.info(f"Left key command sent via Telegram by user {update.effective_user.id}")
+        
+        except Exception as e:
+            error_msg = f"❌ Ошибка: {str(e)}"
+            keyboard = [
+                [
+                    InlineKeyboardButton("⏪", callback_data='press_left'),
+                    InlineKeyboardButton("⏯️", callback_data='press_space'),
+                    InlineKeyboardButton("📸", callback_data='take_screenshot')
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if hasattr(update, 'callback_query'):
+                try:
+                    await update.callback_query.edit_message_text(
+                        error_msg,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
                         await update.callback_query.answer("❌ Ошибка!")
                     else:
                         raise edit_error

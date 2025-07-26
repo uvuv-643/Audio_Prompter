@@ -16,4 +16,12 @@ class MouseController:
     
     def click_at_position(self, x, y):
         pyautogui.click(x, y)
-        return pyautogui.Point(x, y) 
+        return pyautogui.Point(x, y)
+    
+    def press_left_key(self):
+        pyautogui.press('left')
+        return pyautogui.position()
+    
+    def press_space_key(self):
+        pyautogui.press('space')
+        return pyautogui.position() 
