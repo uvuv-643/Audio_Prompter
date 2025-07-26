@@ -108,16 +108,30 @@ class ScreenshotTelegramBot:
         await self.application.updater.start_polling()
         logger.info("Telegram bot started successfully")
         
-        # Keep the bot running
+        # Keep the bot running with proper cancellation handling
         try:
-            await self.application.updater.idle()
+            while self.application and self.application.updater.running:
+                await asyncio.sleep(1)
         except asyncio.CancelledError:
+            logger.info("Telegram bot task cancelled")
             pass
     
     async def stop(self):
         if self.application:
             logger.info("Stopping Telegram bot...")
-            await self.application.updater.stop()
-            await self.application.stop()
-            await self.application.shutdown()
+            try:
+                await asyncio.wait_for(self.application.updater.stop(), timeout=2.0)
+            except asyncio.TimeoutError:
+                logger.warning("Telegram updater stop timeout")
+            
+            try:
+                await asyncio.wait_for(self.application.stop(), timeout=2.0)
+            except asyncio.TimeoutError:
+                logger.warning("Telegram application stop timeout")
+            
+            try:
+                await asyncio.wait_for(self.application.shutdown(), timeout=2.0)
+            except asyncio.TimeoutError:
+                logger.warning("Telegram application shutdown timeout")
+            
             logger.info("Telegram bot stopped") 

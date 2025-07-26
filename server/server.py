@@ -135,29 +135,45 @@ class ScreenshotServer:
             pass
     
     async def stop(self):
+        self.logger.info("Stopping server...")
         self.is_running = False
         
-        if self.telegram_task:
+        # Cancel telegram task first
+        if self.telegram_task and not self.telegram_task.done():
+            self.logger.info("Cancelling telegram task...")
             self.telegram_task.cancel()
             try:
-                await self.telegram_task
-            except asyncio.CancelledError:
+                await asyncio.wait_for(self.telegram_task, timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
                 pass
         
+        # Stop telegram bot
         if self.telegram_bot:
-            await self.telegram_bot.stop()
-        
-        if self.server:
-            self.server.close()
-            await self.server.wait_closed()
-        
-        for client in list(self.clients):
+            self.logger.info("Stopping telegram bot...")
             try:
-                await client.close()
-            except:
+                await asyncio.wait_for(self.telegram_bot.stop(), timeout=2.0)
+            except asyncio.TimeoutError:
                 pass
         
-        self.clients.clear()
-        self.logger.info("Server stopped")
+        # Close websocket server
+        if self.server:
+            self.logger.info("Closing websocket server...")
+            self.server.close()
+            try:
+                await asyncio.wait_for(self.server.wait_closed(), timeout=2.0)
+            except asyncio.TimeoutError:
+                pass
+        
+        # Close all client connections
+        if self.clients:
+            self.logger.info(f"Closing {len(self.clients)} client connections...")
+            for client in list(self.clients):
+                try:
+                    await asyncio.wait_for(client.close(), timeout=1.0)
+                except:
+                    pass
+            self.clients.clear()
+        
+        self.logger.info("Server stopped successfully")
 
  
