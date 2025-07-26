@@ -22,13 +22,13 @@ class ScreenshotTelegramBot:
         logger.info(f"Start command received from user {update.effective_user.id}")
         
         keyboard = [
-            [InlineKeyboardButton("📸 Сделать скриншот", callback_data='take_screenshot')]
+            [InlineKeyboardButton("⏸️ Поставить на паузу", callback_data='take_screenshot')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            "🎬 Бот управления скриншотами\n\n"
-            "Нажмите кнопку ниже, чтобы сделать скриншот:",
+            "🎬 Бот управления переводом\n\n"
+            "Нажмите кнопку ниже, чтобы поставить на паузу:",
             reply_markup=reply_markup
         )
         logger.info("Start command response sent")
@@ -54,13 +54,22 @@ class ScreenshotTelegramBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            message = "📸 Команда скриншота отправлена всем подключенным клиентам!"
+            from datetime import datetime
+            current_time = datetime.now().strftime("%H:%M:%S")
+            message = f"⏸️ Команда перевода отправлена всем подключенным клиентам!\n⏰ {current_time}"
             
             if hasattr(update, 'callback_query'):
-                await update.callback_query.edit_message_text(
-                    message,
-                    reply_markup=reply_markup
-                )
+                try:
+                    await update.callback_query.edit_message_text(
+                        message,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        # Message is the same, just answer the callback query
+                        await update.callback_query.answer("✅ Перевод выполнен!")
+                    else:
+                        raise edit_error
             else:
                 await update.message.reply_text(
                     message,
@@ -70,17 +79,24 @@ class ScreenshotTelegramBot:
             logger.info(f"Screenshot command sent via Telegram by user {update.effective_user.id}")
         
         except Exception as e:
-            error_msg = f"❌ Ошибка отправки команды скриншота: {str(e)}"
+            error_msg = f"❌ Ошибка отправки команды перевода: {str(e)}"
             keyboard = [
-                [InlineKeyboardButton("📸 Сделать скриншот", callback_data='take_screenshot')]
+                [InlineKeyboardButton("⏸️ Поставить на паузу", callback_data='take_screenshot')]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             if hasattr(update, 'callback_query'):
-                await update.callback_query.edit_message_text(
-                    error_msg,
-                    reply_markup=reply_markup
-                )
+                try:
+                    await update.callback_query.edit_message_text(
+                        error_msg,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        # Message is the same, just answer the callback query
+                        await update.callback_query.answer("❌ Ошибка!")
+                    else:
+                        raise edit_error
             else:
                 await update.message.reply_text(
                     error_msg,
