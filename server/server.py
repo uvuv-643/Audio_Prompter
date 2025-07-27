@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Set, Dict, Any
 import logging
 import time
+import os
 
 class ScreenshotServer:
     def __init__(self, host='0.0.0.0', port=8765, enable_telegram=True):
@@ -18,6 +19,7 @@ class ScreenshotServer:
         self.telegram_task = None
         self.is_running = False
         self.start_time = time.time()
+        self.requests_log_file = "user_requests.log"
         
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
@@ -58,18 +60,28 @@ class ScreenshotServer:
         
         if message_type == 'screenshot_completed':
             client_id = data.get('client_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
             result = data.get('result', {})
+            subtitle_text = data.get('subtitle_text')
             self.logger.info(f"Screenshot completed by client {client_id}: {result.get('timing', 'N/A')}")
+            if telegram_user_id and subtitle_text:
+                await self.handle_subtitle_response(telegram_user_id, subtitle_text)
         
         elif message_type == 'left_key_completed':
             client_id = data.get('client_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
             result = data.get('result', {})
             self.logger.info(f"Left key completed by client {client_id}")
+            if telegram_user_id:
+                await self.handle_key_response(telegram_user_id, 'left')
         
         elif message_type == 'space_key_completed':
             client_id = data.get('client_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
             result = data.get('result', {})
             self.logger.info(f"Space key completed by client {client_id}")
+            if telegram_user_id:
+                await self.handle_key_response(telegram_user_id, 'space')
         
         elif message_type == 'heartbeat':
             await websocket.send(json.dumps({
@@ -77,7 +89,7 @@ class ScreenshotServer:
                 'timestamp': datetime.now().isoformat()
             }))
     
-    async def broadcast_screenshot_command(self):
+    async def broadcast_screenshot_command(self, telegram_user_id=None):
         if not self.clients:
             self.logger.warning("No connected clients to send screenshot command to")
             return
@@ -85,7 +97,8 @@ class ScreenshotServer:
         message = {
             'type': 'execute_screenshot',
             'timestamp': datetime.now().isoformat(),
-            'command_id': f"cmd_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            'command_id': f"cmd_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'telegram_user_id': telegram_user_id
         }
         
         message_json = json.dumps(message)
@@ -111,7 +124,7 @@ class ScreenshotServer:
         self.logger.info(f"Screenshot command sent to {sent_count} clients")
         return sent_count
     
-    async def broadcast_left_key_command(self):
+    async def broadcast_left_key_command(self, telegram_user_id=None):
         if not self.clients:
             self.logger.warning("No connected clients to send left key command to")
             return
@@ -119,7 +132,8 @@ class ScreenshotServer:
         message = {
             'type': 'execute_left_key',
             'timestamp': datetime.now().isoformat(),
-            'command_id': f"left_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            'command_id': f"left_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'telegram_user_id': telegram_user_id
         }
         
         message_json = json.dumps(message)
@@ -145,7 +159,7 @@ class ScreenshotServer:
         self.logger.info(f"Left key command sent to {sent_count} clients")
         return sent_count
     
-    async def broadcast_space_key_command(self):
+    async def broadcast_space_key_command(self, telegram_user_id=None):
         if not self.clients:
             self.logger.warning("No connected clients to send space key command to")
             return
@@ -153,7 +167,8 @@ class ScreenshotServer:
         message = {
             'type': 'execute_space_key',
             'timestamp': datetime.now().isoformat(),
-            'command_id': f"space_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            'command_id': f"space_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'telegram_user_id': telegram_user_id
         }
         
         message_json = json.dumps(message)
@@ -237,5 +252,30 @@ class ScreenshotServer:
         
         self.clients.clear()
         self.logger.info("Server stopped")
+    
+    async def handle_subtitle_response(self, telegram_user_id, subtitle_text):
+        if self.telegram_bot:
+            await self.telegram_bot.send_subtitle_response(telegram_user_id, subtitle_text)
+        self.log_user_request(telegram_user_id, subtitle_text)
+    
+    async def handle_key_response(self, telegram_user_id, key_type):
+        if self.telegram_bot:
+            await self.telegram_bot.send_key_response(telegram_user_id, key_type)
+        self.log_user_request(telegram_user_id, f"Кнопка {key_type}")
+    
+    def log_user_request(self, telegram_user_id, request_text):
+        try:
+            if not os.path.exists(self.requests_log_file):
+                with open(self.requests_log_file, 'w', encoding='utf-8') as f:
+                    f.write("Telegram_ID\tRequest_Text\n")
+            
+            log_entry = f"{telegram_user_id}\t{request_text}\n"
+            
+            with open(self.requests_log_file, 'a', encoding='utf-8') as f:
+                f.write(log_entry)
+            
+            self.logger.info(f"Logged request: User {telegram_user_id} - {request_text}")
+        except Exception as e:
+            self.logger.error(f"Error logging user request: {e}")
 
  

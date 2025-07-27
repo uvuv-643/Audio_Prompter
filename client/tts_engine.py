@@ -51,7 +51,7 @@ class TTSEngine:
     
     async def _generate_speech(self, text):
         try:
-            communicate = Communicate(text, self.voice)
+            communicate = Communicate(text, self.voice, rate="+30%")
             
             with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
                 temp_path = temp_file.name

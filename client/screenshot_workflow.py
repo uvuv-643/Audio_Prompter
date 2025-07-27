@@ -62,11 +62,19 @@ class ScreenshotWorkflow:
         
         saved_filepath = self.file_manager.save_image(cropped_screenshot)
         
+        subtitle_text = ''
+        if timing and self.text_detector.is_valid_timing(timing):
+            if self.vtt_parser.subtitles:
+                subtitle_info = self.vtt_parser.get_subtitle_info(timing)
+                if subtitle_info:
+                    timing_str, subtitle_text = subtitle_info
+        
         return {
             'mouse_position': current_pos,
             'saved_filepath': saved_filepath,
             'crop_size': 100,
-            'timing': timing
+            'timing': timing,
+            'subtitle_text': subtitle_text
         }
     
     def _handle_subtitle_speech(self, subtitle_text, mouse_position):

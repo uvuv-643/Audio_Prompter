@@ -69,18 +69,21 @@ class ScreenshotClient:
         
         elif message_type == 'execute_screenshot':
             command_id = data.get('command_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
             logger.info(f"Executing screenshot command: {command_id}")
-            await self.execute_screenshot_command(command_id)
+            await self.execute_screenshot_command(command_id, telegram_user_id)
         
         elif message_type == 'execute_left_key':
             command_id = data.get('command_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
             logger.info(f"Executing left key command: {command_id}")
-            await self.execute_left_key_command(command_id)
+            await self.execute_left_key_command(command_id, telegram_user_id)
         
         elif message_type == 'execute_space_key':
             command_id = data.get('command_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
             logger.info(f"Executing space key command: {command_id}")
-            await self.execute_space_key_command(command_id)
+            await self.execute_space_key_command(command_id, telegram_user_id)
         
         elif message_type == 'heartbeat_ack':
             logger.debug("Heartbeat acknowledged by server")
@@ -88,7 +91,7 @@ class ScreenshotClient:
         else:
             logger.warning(f"Unknown message type received: {message_type}")
     
-    async def execute_screenshot_command(self, command_id):
+    async def execute_screenshot_command(self, command_id, telegram_user_id=None):
         try:
             logger.info(f"Starting screenshot workflow for command: {command_id}")
             result = self.workflow.execute_screenshot_workflow()
@@ -99,11 +102,15 @@ class ScreenshotClient:
             else:
                 logger.warning("Screenshot completed but no timing detected")
             
+            subtitle_text = result.get('subtitle_text', '')
+            
             response = {
                 'type': 'screenshot_completed',
                 'client_id': self.client_id,
                 'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
+                'subtitle_text': subtitle_text,
                 'result': {
                     'timing': result.get('timing'),
                     'mouse_position': {
@@ -125,6 +132,7 @@ class ScreenshotClient:
                 'type': 'screenshot_error',
                 'client_id': self.client_id,
                 'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
                 'error': str(e)
             }
@@ -133,7 +141,7 @@ class ScreenshotClient:
                 await self.websocket.send(json.dumps(error_response))
                 logger.info(f"Sent error response to server for command: {command_id}")
     
-    async def execute_left_key_command(self, command_id):
+    async def execute_left_key_command(self, command_id, telegram_user_id=None):
         try:
             from mouse_controller import MouseController
             controller = MouseController()
@@ -143,6 +151,7 @@ class ScreenshotClient:
                 'type': 'left_key_completed',
                 'client_id': self.client_id,
                 'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
                 'result': {
                     'mouse_position': {
@@ -162,6 +171,7 @@ class ScreenshotClient:
                 'type': 'left_key_error',
                 'client_id': self.client_id,
                 'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
                 'error': str(e)
             }
@@ -170,7 +180,7 @@ class ScreenshotClient:
                 await self.websocket.send(json.dumps(error_response))
                 logger.info(f"Sent left key error response to server for command: {command_id}")
     
-    async def execute_space_key_command(self, command_id):
+    async def execute_space_key_command(self, command_id, telegram_user_id=None):
         try:
             from mouse_controller import MouseController
             controller = MouseController()
@@ -180,6 +190,7 @@ class ScreenshotClient:
                 'type': 'space_key_completed',
                 'client_id': self.client_id,
                 'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
                 'result': {
                     'mouse_position': {
@@ -199,6 +210,7 @@ class ScreenshotClient:
                 'type': 'space_key_error',
                 'client_id': self.client_id,
                 'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
                 'error': str(e)
             }
