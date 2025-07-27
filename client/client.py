@@ -85,6 +85,12 @@ class ScreenshotClient:
             logger.info(f"Executing space key command: {command_id}")
             await self.execute_space_key_command(command_id, telegram_user_id)
         
+        elif message_type == 'execute_next_subtitle':
+            command_id = data.get('command_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
+            logger.info(f"Executing next subtitle command: {command_id}")
+            await self.execute_next_subtitle_command(command_id, telegram_user_id)
+        
         elif message_type == 'heartbeat_ack':
             logger.debug("Heartbeat acknowledged by server")
         
@@ -218,6 +224,42 @@ class ScreenshotClient:
             if self.websocket:
                 await self.websocket.send(json.dumps(error_response))
                 logger.info(f"Sent space key error response to server for command: {command_id}")
+    
+    async def execute_next_subtitle_command(self, command_id, telegram_user_id=None):
+        try:
+            logger.info(f"Executing next subtitle command: {command_id}")
+            result = self.workflow.execute_next_subtitle()
+            
+            response = {
+                'type': 'next_subtitle_completed',
+                'client_id': self.client_id,
+                'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
+                'timestamp': datetime.now().isoformat(),
+                'result': {
+                    'new_url': result.get('new_url'),
+                    'old_url': result.get('old_url')
+                }
+            }
+            
+            if self.websocket:
+                await self.websocket.send(json.dumps(response))
+                logger.info(f"Sent next subtitle completion response to server for command: {command_id}")
+        
+        except Exception as e:
+            logger.error(f"Error executing next subtitle: {e}")
+            error_response = {
+                'type': 'next_subtitle_error',
+                'client_id': self.client_id,
+                'command_id': command_id,
+                'telegram_user_id': telegram_user_id,
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e)
+            }
+            
+            if self.websocket:
+                await self.websocket.send(json.dumps(error_response))
+                logger.info(f"Sent next subtitle error response to server for command: {command_id}")
     
     async def send_heartbeat(self):
         while self.is_running and self.websocket:

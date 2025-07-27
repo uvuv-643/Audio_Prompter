@@ -77,6 +77,34 @@ class ScreenshotWorkflow:
             'subtitle_text': subtitle_text
         }
     
+    def execute_next_subtitle(self):
+        if not self.vtt_url:
+            raise ValueError("No VTT URL configured")
+        
+        import re
+        
+        old_url = self.vtt_url
+        numbers = re.findall(r'\d+', old_url)
+        
+        if not numbers:
+            raise ValueError("No numbers found in URL")
+        
+        last_number = numbers[-1]
+        new_number = str(int(last_number) + 1)
+        
+        new_url = re.sub(r'\d+(?=[^/]*$)', new_number, old_url)
+        new_url = new_url.replace("rus", "eng")
+        
+        self.vtt_url = new_url
+        self._load_vtt_subtitles()
+        
+        return {
+            'old_url': old_url,
+            'new_url': new_url,
+            'old_number': last_number,
+            'new_number': new_number
+        }
+    
     def _handle_subtitle_speech(self, subtitle_text, mouse_position):
         def speech_and_click():
             try:

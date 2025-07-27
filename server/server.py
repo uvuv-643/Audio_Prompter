@@ -83,6 +83,14 @@ class ScreenshotServer:
             if telegram_user_id:
                 await self.handle_key_response(telegram_user_id, 'space')
         
+        elif message_type == 'next_subtitle_completed':
+            client_id = data.get('client_id', 'unknown')
+            telegram_user_id = data.get('telegram_user_id')
+            result = data.get('result', {})
+            self.logger.info(f"Next subtitle completed by client {client_id}")
+            if telegram_user_id:
+                await self.handle_next_subtitle_response(telegram_user_id, result)
+        
         elif message_type == 'heartbeat':
             await websocket.send(json.dumps({
                 'type': 'heartbeat_ack',
@@ -168,6 +176,18 @@ class ScreenshotServer:
             'type': 'execute_space_key',
             'timestamp': datetime.now().isoformat(),
             'command_id': f"space_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'telegram_user_id': telegram_user_id
+        }
+    
+    async def broadcast_next_subtitle_command(self, telegram_user_id=None):
+        if not self.clients:
+            self.logger.warning("No connected clients to send next subtitle command to")
+            return
+        
+        message = {
+            'type': 'execute_next_subtitle',
+            'timestamp': datetime.now().isoformat(),
+            'command_id': f"next_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             'telegram_user_id': telegram_user_id
         }
         
@@ -259,9 +279,15 @@ class ScreenshotServer:
             await self.telegram_bot.send_subtitle_response(telegram_user_id, subtitle_text)
     
     async def handle_key_response(self, telegram_user_id, key_type):
-        self.log_user_request(telegram_user_id, f"Кнопка {key_type}")
         if self.telegram_bot:
             await self.telegram_bot.send_key_response(telegram_user_id, key_type)
+    
+    async def handle_next_subtitle_response(self, telegram_user_id, result):
+        new_url = result.get('new_url', '')
+        old_url = result.get('old_url', '')
+        self.log_user_request(telegram_user_id, f"Переход к следующей серии: {old_url} -> {new_url}")
+        if self.telegram_bot:
+            await self.telegram_bot.send_next_subtitle_response(telegram_user_id, result)
     
     def log_user_request(self, telegram_user_id, request_text):
         try:

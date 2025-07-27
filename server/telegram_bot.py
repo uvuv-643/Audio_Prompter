@@ -43,6 +43,10 @@ class ScreenshotTelegramBot:
         logger.info(f"Pause command received from user {update.effective_user.id}")
         await self.take_screenshot(update, context)
     
+    async def next_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        logger.info(f"Next command received from user {update.effective_user.id}")
+        await self.handle_next_subtitle(update, context)
+    
 
     
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,7 +70,7 @@ class ScreenshotTelegramBot:
             keyboard = self._create_keyboard()
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            message = f"📸 Перевод выполнен!"
+            message = "🎬 Выберите действие"
             
             if hasattr(update, 'callback_query'):
                 try:
@@ -76,7 +80,7 @@ class ScreenshotTelegramBot:
                     )
                 except Exception as edit_error:
                     if "Message is not modified" in str(edit_error):
-                        await update.callback_query.answer("✅ Перевод выполнен!")
+                        await update.callback_query.answer("✅ Выполнено!")
                     else:
                         raise edit_error
             else:
@@ -118,7 +122,7 @@ class ScreenshotTelegramBot:
             keyboard = self._create_keyboard()
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            message = f"⏯️ Пауза выполнена!"
+            message = "🎬 Выберите действие"
             
             if hasattr(update, 'callback_query'):
                 try:
@@ -128,7 +132,7 @@ class ScreenshotTelegramBot:
                     )
                 except Exception as edit_error:
                     if "Message is not modified" in str(edit_error):
-                        await update.callback_query.answer("✅ Пауза выполнена!")
+                        await update.callback_query.answer("✅ Выполнено!")
                     else:
                         raise edit_error
             else:
@@ -170,7 +174,7 @@ class ScreenshotTelegramBot:
             keyboard = self._create_keyboard()
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            message = f"⏪ Перемотка назад выполнена!"
+            message = "🎬 Выберите действие"
             
             if hasattr(update, 'callback_query'):
                 try:
@@ -180,7 +184,7 @@ class ScreenshotTelegramBot:
                     )
                 except Exception as edit_error:
                     if "Message is not modified" in str(edit_error):
-                        await update.callback_query.answer("✅ Перемотка выполнена!")
+                        await update.callback_query.answer("✅ Выполнено!")
                     else:
                         raise edit_error
             else:
@@ -220,7 +224,60 @@ class ScreenshotTelegramBot:
     async def send_key_response(self, telegram_user_id, key_type):
         logger.info(f"Key response logged for user {telegram_user_id}: {key_type}")
     
-
+    async def send_next_subtitle_response(self, telegram_user_id, result):
+        logger.info(f"Next subtitle response logged for user {telegram_user_id}: {result}")
+    
+    async def handle_next_subtitle(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            telegram_user_id = update.effective_user.id
+            await self.screenshot_server.broadcast_next_subtitle_command(telegram_user_id)
+            
+            keyboard = self._create_keyboard()
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            message = "🎬 Выберите действие"
+            
+            if hasattr(update, 'callback_query'):
+                try:
+                    await update.callback_query.edit_message_text(
+                        message,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        await update.callback_query.answer("✅ Выполнено!")
+                    else:
+                        raise edit_error
+            else:
+                await update.message.reply_text(
+                    message,
+                    reply_markup=reply_markup
+                )
+            
+            logger.info(f"Next subtitle command sent via Telegram by user {update.effective_user.id}")
+        
+        except Exception as e:
+            error_msg = f"❌ Ошибка: {str(e)}"
+            keyboard = self._create_keyboard()
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            if hasattr(update, 'callback_query'):
+                try:
+                    await update.callback_query.edit_message_text(
+                        error_msg,
+                        reply_markup=reply_markup
+                    )
+                except Exception as edit_error:
+                    if "Message is not modified" in str(edit_error):
+                        await update.callback_query.answer("❌ Ошибка!")
+                    else:
+                        raise edit_error
+            else:
+                await update.message.reply_text(
+                    error_msg,
+                    reply_markup=reply_markup
+                )
+            logger.error(f"Telegram bot error: {e}")
     
     async def start(self):
         if not self.bot_token:
@@ -232,6 +289,7 @@ class ScreenshotTelegramBot:
         
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("pause", self.pause_command))
+        self.application.add_handler(CommandHandler("next", self.next_command))
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
         
         logger.info("Starting Telegram bot...")
