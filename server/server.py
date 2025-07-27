@@ -63,9 +63,11 @@ class ScreenshotServer:
             telegram_user_id = data.get('telegram_user_id')
             result = data.get('result', {})
             subtitle_text = data.get('subtitle_text')
+            russian_text = data.get('russian_text', '')
+            timing = data.get('timing', '')
             self.logger.info(f"Screenshot completed by client {client_id}: {result.get('timing', 'N/A')}")
             if telegram_user_id and subtitle_text:
-                await self.handle_subtitle_response(telegram_user_id, subtitle_text)
+                await self.handle_subtitle_response(telegram_user_id, subtitle_text, russian_text, timing)
         
         elif message_type == 'left_key_completed':
             client_id = data.get('client_id', 'unknown')
@@ -273,8 +275,8 @@ class ScreenshotServer:
         self.clients.clear()
         self.logger.info("Server stopped")
     
-    async def handle_subtitle_response(self, telegram_user_id, subtitle_text):
-        self.log_user_request(telegram_user_id, subtitle_text.replace("\n", " "))
+    async def handle_subtitle_response(self, telegram_user_id, subtitle_text, russian_text="", timing=""):
+        self.log_user_request(telegram_user_id, subtitle_text.replace("\n", " "), russian_text.replace("\n", " "), timing)
         if self.telegram_bot:
             await self.telegram_bot.send_subtitle_response(telegram_user_id, subtitle_text)
     
@@ -289,7 +291,7 @@ class ScreenshotServer:
         if self.telegram_bot:
             await self.telegram_bot.send_next_subtitle_response(telegram_user_id, result)
     
-    def log_user_request(self, telegram_user_id, request_text):
+    def log_user_request(self, telegram_user_id, request_text, russian_text="", timing=""):
         try:
             if not telegram_user_id or not request_text:
                 self.logger.warning(f"Skipping log entry - missing data: user_id={telegram_user_id}, text={request_text}")
@@ -297,9 +299,9 @@ class ScreenshotServer:
             
             if not os.path.exists(self.requests_log_file):
                 with open(self.requests_log_file, 'w', encoding='utf-8') as f:
-                    f.write("Telegram_ID\tRequest_Text\n")
+                    f.write("Telegram_ID\tRequest_Text\tRussian_Text\tTiming\n")
             
-            log_entry = f"{telegram_user_id}\t{request_text}\n"
+            log_entry = f"{telegram_user_id}\t{request_text}\t{russian_text}\t{timing}\n"
             
             with open(self.requests_log_file, 'a', encoding='utf-8') as f:
                 f.write(log_entry)

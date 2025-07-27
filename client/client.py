@@ -110,6 +110,7 @@ class ScreenshotClient:
             
             subtitle_text = result.get('subtitle_text', '')
             eng_subtitle_text = result.get('eng_subtitle_text', '')
+            timing = result.get('timing', '')
             
             response = {
                 'type': 'screenshot_completed',
@@ -118,6 +119,8 @@ class ScreenshotClient:
                 'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
                 'subtitle_text': eng_subtitle_text if eng_subtitle_text else subtitle_text,
+                'russian_text': subtitle_text,
+                'timing': timing,
                 'result': {
                     'timing': result.get('timing'),
                     'mouse_position': {
