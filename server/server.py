@@ -285,7 +285,8 @@ class ScreenshotServer:
     async def handle_next_subtitle_response(self, telegram_user_id, result):
         new_url = result.get('new_url', '')
         old_url = result.get('old_url', '')
-        self.log_user_request(telegram_user_id, f"Переход к следующей серии: {old_url} -> {new_url}")
+        eng_url = result.get('eng_url', '')
+        self.log_user_request(telegram_user_id, f"Переход к следующей серии: {old_url} -> {new_url} (eng: {eng_url})")
         if self.telegram_bot:
             await self.telegram_bot.send_next_subtitle_response(telegram_user_id, result)
     

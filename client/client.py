@@ -109,6 +109,7 @@ class ScreenshotClient:
                 logger.warning("Screenshot completed but no timing detected")
             
             subtitle_text = result.get('subtitle_text', '')
+            eng_subtitle_text = result.get('eng_subtitle_text', '')
             
             response = {
                 'type': 'screenshot_completed',
@@ -116,7 +117,7 @@ class ScreenshotClient:
                 'command_id': command_id,
                 'telegram_user_id': telegram_user_id,
                 'timestamp': datetime.now().isoformat(),
-                'subtitle_text': subtitle_text,
+                'subtitle_text': eng_subtitle_text if eng_subtitle_text else subtitle_text,
                 'result': {
                     'timing': result.get('timing'),
                     'mouse_position': {

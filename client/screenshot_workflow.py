@@ -63,18 +63,28 @@ class ScreenshotWorkflow:
         saved_filepath = self.file_manager.save_image(cropped_screenshot)
         
         subtitle_text = ''
+        eng_subtitle_text = ''
         if timing and self.text_detector.is_valid_timing(timing):
             if self.vtt_parser.subtitles:
                 subtitle_info = self.vtt_parser.get_subtitle_info(timing)
                 if subtitle_info:
                     timing_str, subtitle_text = subtitle_info
+                    
+                    if self.vtt_url and "rus" in self.vtt_url:
+                        eng_url = self.vtt_url.replace("rus", "eng")
+                        eng_parser = VTTParser()
+                        if eng_parser.load_from_url(eng_url):
+                            eng_subtitle_info = eng_parser.get_subtitle_info(timing)
+                            if eng_subtitle_info:
+                                eng_subtitle_text = eng_subtitle_info[1]
         
         return {
             'mouse_position': current_pos,
             'saved_filepath': saved_filepath,
             'crop_size': 100,
             'timing': timing,
-            'subtitle_text': subtitle_text
+            'subtitle_text': subtitle_text,
+            'eng_subtitle_text': eng_subtitle_text
         }
     
     def execute_next_subtitle(self):
@@ -93,14 +103,16 @@ class ScreenshotWorkflow:
         new_number = str(int(last_number) + 1)
         
         new_url = re.sub(r'\d+(?=[^/]*$)', new_number, old_url)
-        new_url = new_url.replace("rus", "eng")
         
         self.vtt_url = new_url
         self._load_vtt_subtitles()
         
+        eng_url = new_url.replace("rus", "eng")
+        
         return {
             'old_url': old_url,
             'new_url': new_url,
+            'eng_url': eng_url,
             'old_number': last_number,
             'new_number': new_number
         }
