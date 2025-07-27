@@ -274,7 +274,7 @@ class ScreenshotServer:
         self.logger.info("Server stopped")
     
     async def handle_subtitle_response(self, telegram_user_id, subtitle_text):
-        self.log_user_request(telegram_user_id, subtitle_text)
+        self.log_user_request(telegram_user_id, subtitle_text.replace("\n", " "))
         if self.telegram_bot:
             await self.telegram_bot.send_subtitle_response(telegram_user_id, subtitle_text)
     
@@ -286,7 +286,6 @@ class ScreenshotServer:
         new_url = result.get('new_url', '')
         old_url = result.get('old_url', '')
         eng_url = result.get('eng_url', '')
-        self.log_user_request(telegram_user_id, f"Переход к следующей серии: {old_url} -> {new_url} (eng: {eng_url})")
         if self.telegram_bot:
             await self.telegram_bot.send_next_subtitle_response(telegram_user_id, result)
     
