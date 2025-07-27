@@ -254,17 +254,21 @@ class ScreenshotServer:
         self.logger.info("Server stopped")
     
     async def handle_subtitle_response(self, telegram_user_id, subtitle_text):
+        self.log_user_request(telegram_user_id, subtitle_text)
         if self.telegram_bot:
             await self.telegram_bot.send_subtitle_response(telegram_user_id, subtitle_text)
-        self.log_user_request(telegram_user_id, subtitle_text)
     
     async def handle_key_response(self, telegram_user_id, key_type):
+        self.log_user_request(telegram_user_id, f"Кнопка {key_type}")
         if self.telegram_bot:
             await self.telegram_bot.send_key_response(telegram_user_id, key_type)
-        self.log_user_request(telegram_user_id, f"Кнопка {key_type}")
     
     def log_user_request(self, telegram_user_id, request_text):
         try:
+            if not telegram_user_id or not request_text:
+                self.logger.warning(f"Skipping log entry - missing data: user_id={telegram_user_id}, text={request_text}")
+                return
+            
             if not os.path.exists(self.requests_log_file):
                 with open(self.requests_log_file, 'w', encoding='utf-8') as f:
                     f.write("Telegram_ID\tRequest_Text\n")
